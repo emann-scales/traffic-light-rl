@@ -1,11 +1,1 @@
-<configuration>
-    <input>
-        <net-file value="intersection.net.xml"/>
-        <route-files value="traffic.rou.xml"/>
-    </input>
-    <time>
-        <begin value="0"/>
-        <end value="3600"/>
-        <step-length value="1.0"/>
-    </time>
-</configuration>
+
