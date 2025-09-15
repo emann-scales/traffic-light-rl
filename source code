@@ -1,0 +1,101 @@
+import numpy as np
+import random
+
+class TrafficEnvironment:
+    def __init__(self, n_lanes=4, max_queue=10):
+        self.n_lanes = n_lanes
+        self.max_queue = max_queue
+        self.state = np.zeros(self.n_lanes, dtype=int)  # queue length per lane
+        self.time = 0
+
+    def reset(self):
+        self.state = np.random.randint(0, self.max_queue // 2, size=self.n_lanes)
+        self.time = 0
+        return self.state.copy()
+
+    def step(self, action):
+        """
+        action: int, index of lane to turn green (one-hot)
+        Returns: next_state, reward, done, info
+        """
+        # Simulate cars arriving
+        arrivals = np.random.poisson(1, size=self.n_lanes)
+        self.state = np.minimum(self.state + arrivals, self.max_queue)
+
+        # Simulate green light for selected lane
+        cars_passed = min(self.state[action], random.randint(1, 3))
+        self.state[action] -= cars_passed
+
+        # Calculate reward: negative total waiting cars
+        reward = -np.sum(self.state)
+
+        self.time += 1
+        done = self.time >= 100  # Example episode length
+
+        return self.state.copy(), reward, done, {}
+
+    def get_state_space_size(self):
+        return (self.max_queue + 1) ** self.n_lanes
+
+    def get_action_space_size(self):
+        return self.n_lanes
+
+
+class QLearningAgent:
+    def __init__(self, n_states, n_actions, alpha=0.1, gamma=0.9, epsilon=0.1):
+        self.n_states = n_states
+        self.n_actions = n_actions
+        self.q_table = {}
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+
+    def get_state_key(self, state):
+        # Convert array state to a tuple key
+        return tuple(state)
+
+    def choose_action(self, state):
+        key = self.get_state_key(state)
+        if random.uniform(0, 1) < self.epsilon or key not in self.q_table:
+            return random.randint(0, self.n_actions - 1)
+        return np.argmax(self.q_table[key])
+
+    def update(self, state, action, reward, next_state):
+        key = self.get_state_key(state)
+        next_key = self.get_state_key(next_state)
+
+        if key not in self.q_table:
+            self.q_table[key] = np.zeros(self.n_actions)
+        if next_key not in self.q_table:
+            self.q_table[next_key] = np.zeros(self.n_actions)
+
+        best_next_action = np.max(self.q_table[next_key])
+        target = reward + self.gamma * best_next_action
+        self.q_table[key][action] += self.alpha * (target - self.q_table[key][action])
+
+
+def train_traffic_rl(episodes=1000):
+    env = TrafficEnvironment()
+    agent = QLearningAgent(
+        n_states=env.get_state_space_size(),
+        n_actions=env.get_action_space_size()
+    )
+
+    for episode in range(episodes):
+        state = env.reset()
+        total_reward = 0
+        done = False
+        while not done:
+            action = agent.choose_action(state)
+            next_state, reward, done, _ = env.step(action)
+            agent.update(state, action, reward, next_state)
+            state = next_state
+            total_reward += reward
+        if episode % 100 == 0:
+            print(f"Episode {episode}, Total reward: {total_reward}")
+
+    print("Training finished.")
+    return agent, env
+
+if __name__ == "__main__":
+    agent, env = train_traffic_rl(episodes=1000)
