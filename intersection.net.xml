@@ -1,0 +1,5 @@
+<!-- Simplified demo network -->
+<net>
+    <edge id="1" from="n1" to="n2" priority="1" numLanes="1" speed="13.9"/>
+    <edge id="2" from="n2" to="n1" priority="1" numLanes="1" speed="13.9"/>
+</net>
